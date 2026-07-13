@@ -1,0 +1,12 @@
+services:
+  monitor:
+    build: .
+    restart: unless-stopped
+    env_file:
+      - .env
+    volumes:
+      - ./monitor.db:/app/monitor.db
+      - ./tg_monitor.session:/app/tg_monitor.session
+      - ./tg_monitor.session-journal:/app/tg_monitor.session-journal
+    stdin_open: true
+    tty: true

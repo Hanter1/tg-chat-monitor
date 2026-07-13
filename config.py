@@ -15,6 +15,9 @@ class Settings:
     admin_user_id: int
     database_url: str
     poll_interval: int
+    scan_history_limit: int
+    scan_period_days: int
+    scan_mode: str
 
 
 def get_settings() -> Settings:
@@ -38,4 +41,7 @@ def get_settings() -> Settings:
         admin_user_id=int(admin_user_id),
         database_url=os.getenv("DATABASE_URL", "sqlite+aiosqlite:///./monitor.db"),
         poll_interval=int(os.getenv("POLL_INTERVAL", "10")),
+        scan_history_limit=int(os.getenv("SCAN_HISTORY_LIMIT", "100")),
+        scan_period_days=int(os.getenv("SCAN_PERIOD_DAYS", "7")),
+        scan_mode=os.getenv("SCAN_MODE", "timeline"),
     )

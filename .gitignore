@@ -4,9 +4,16 @@
 # Telethon-сессия
 *.session
 *.session-journal
+*.session-wal
+*.session-shm
+
+# Блокировка единственного экземпляра
+.tg-chat-monitor.lock
 
 # База данных
 *.db
+*.db-shm
+*.db-wal
 
 # Python
 __pycache__/
@@ -19,6 +26,10 @@ build/
 .venv/
 venv/
 env/
+.python/
+
+# Кэш установщика Windows
+installer/windows/.cache/
 
 # IDE
 .idea/

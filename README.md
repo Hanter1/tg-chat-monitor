@@ -99,13 +99,27 @@ sequenceDiagram
 
 ```
 tg-chat-monitor/
+├── install.bat       # Установщик для Windows (скачивает Python)
+├── start.bat         # Запуск бота (Windows)
 ├── main.py           # Точка входа
-├── bot.py            # Команды aiogram
+├── setup.py          # Мастер настройки (веб-интерфейс)
+├── setup.bat         # Запуск мастера (Windows)
+├── setup.sh          # Запуск мастера (Linux/macOS)
+├── installer/        # Скрипты установщика Windows
+├── setup/            # Веб-сервер мастера настройки
+├── bot.py            # Тонкая обёртка (re-export handlers)
+├── handlers/         # Обработчики aiogram (меню, чаты, слова, настройки)
+├── services/         # chat_resolver, dialogs
+├── bot_ui.py         # Клавиатуры и HTML-форматирование
 ├── monitor.py        # Цикл мониторинга (Telethon)
 ├── database.py       # Модели и запросы SQLAlchemy
 ├── utils.py          # Формирование ссылок, поиск слов
 ├── config.py         # Загрузка .env
 ├── requirements.txt
+├── requirements-dev.txt
+├── tests/            # pytest
+├── Dockerfile
+├── docker-compose.yml
 ├── .env.example      # Шаблон переменных окружения
 └── docs/
     └── assets/
@@ -118,7 +132,7 @@ tg-chat-monitor/
 
 ### Требования
 
-- **Python 3.10+**
+- **Python 3.10+** *(на Windows установщик скачает его сам)*
 - **Telegram-аккаунт** (для Telethon — вы должны быть участником отслеживаемых чатов)
 - **Telegram-бот** (токен от [@BotFather](https://t.me/BotFather))
 - **API ID и API Hash** с [my.telegram.org](https://my.telegram.org/apps)
@@ -130,7 +144,59 @@ git clone https://github.com/Hanter1/tg-chat-monitor.git
 cd tg-chat-monitor
 ```
 
-### 2. Виртуальное окружение
+### 2. Установка
+
+#### 🪟 Windows — без установленного Python
+
+На «чистом» ПК достаточно **дважды кликнуть** `install.bat`:
+
+```
+install.bat   ← скачает Python, зависимости, откроет настройку в браузере
+start.bat     ← запуск бота после установки
+```
+
+Установщик автоматически:
+
+1. Проверит, есть ли Python 3.10+
+2. Если нет — **скачает и установит** Python в профиль пользователя (без прав администратора)
+3. Создаст виртуальное окружение `venv/`
+4. Установит все пакеты из `requirements.txt`
+5. Откроет **мастер настройки** в браузере (веб-форма для `.env`)
+
+> Нужен интернет. Установка занимает 2–5 минут.
+
+#### 🐧 Linux / macOS — мастер настройки
+
+```bash
+chmod +x setup.sh
+./setup.sh
+# или
+python3 setup.py
+```
+
+#### 🪟 Windows — если Python уже установлен
+
+```bash
+setup.bat
+# или
+python setup.py
+```
+
+Мастер настройки проведёт через 4 шага:
+
+1. **Проверка** — версия Python, наличие `.env` и зависимостей
+2. **Настройки** — веб-форма со всеми переменными окружения (как в панели администратора)
+3. **Зависимости** — установка пакетов из `requirements.txt` одной кнопкой
+4. **Запуск** — инструкции по первому запуску и командам бота
+
+> Веб-интерфейс доступен по адресу `http://127.0.0.1:8765/`
+
+### Альтернатива: ручная настройка
+
+<details>
+<summary>Настроить вручную без мастера</summary>
+
+#### Виртуальное окружение
 
 ```bash
 # Windows
@@ -142,40 +208,32 @@ python3 -m venv venv
 source venv/bin/activate
 ```
 
-### 3. Установка зависимостей
+#### Установка зависимостей
 
 ```bash
 pip install -r requirements.txt
 ```
 
-### 4. Настройка `.env`
+#### Настройка `.env`
 
 ```bash
-cp .env.example .env
+cp .env.example .env   # Linux/macOS
+copy .env.example .env # Windows
 ```
 
 Заполните файл `.env`:
 
 ```env
-# Токен бота от @BotFather
 BOT_TOKEN=123456789:ABCdefGHIjklMNOpqrsTUVwxyz
-
-# API credentials с https://my.telegram.org/apps
 API_ID=12345678
 API_HASH=your_api_hash_here
-
-# Имя файла сессии Telethon (создаётся автоматически)
 TELETHON_SESSION=monitor_session
-
-# Ваш Telegram User ID — узнать: @userinfobot
 ADMIN_USER_ID=123456789
-
-# База данных SQLite
 DATABASE_URL=sqlite+aiosqlite:///./monitor.db
-
-# Интервал опроса чатов в секундах
 POLL_INTERVAL=10
 ```
+
+</details>
 
 #### 🔑 Где взять credentials?
 
@@ -191,9 +249,13 @@ POLL_INTERVAL=10
 | `API_ID`, `API_HASH` | [my.telegram.org/apps](https://my.telegram.org/apps) |
 | `ADMIN_USER_ID` | [@userinfobot](https://t.me/userinfobot) или [@getidsbot](https://t.me/getidsbot) |
 
-### 5. Первый запуск
+### 3. Первый запуск
 
 ```bash
+# Windows (после install.bat)
+start.bat
+
+# Или вручную
 python main.py
 ```
 
@@ -208,7 +270,7 @@ python main.py
 
 После авторизации создаётся файл сессии (`monitor_session.session`) — **не публикуйте его в Git!**
 
-### 6. Настройка через бота
+### 4. Настройка через бота
 
 1. Найдите своего бота в Telegram и нажмите **Start** (`/start`)
 2. Добавьте чат — перешлите боту любое сообщение из целевой группы:
@@ -321,18 +383,28 @@ sudo systemctl status tg-chat-monitor
 Start-Process python -ArgumentList "main.py" -WindowStyle Hidden
 ```
 
-### Docker (пример)
+### Docker
 
-```dockerfile
-FROM python:3.12-slim
-WORKDIR /app
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
-COPY . .
-CMD ["python", "main.py"]
+```bash
+# Сначала авторизуйте Telethon локально (python main.py) и сохраните *.session
+docker compose up -d --build
 ```
 
-> Для Docker потребуется предварительно авторизовать Telethon-сессию и смонтировать файл `*.session` как volume.
+Файлы `.env`, `monitor.db` и `*.session` монтируются как volumes (см. `docker-compose.yml`).
+
+### Разработка и тесты
+
+```bash
+python -m venv venv
+venv\Scripts\activate          # Windows
+# source venv/bin/activate     # Linux/macOS
+
+pip install -r requirements-dev.txt
+ruff check .
+pytest
+```
+
+CI (GitHub Actions): `ruff check` + `pytest` на каждый push/PR в `main`.
 
 ---
 
@@ -371,7 +443,7 @@ Telegram Client API (Telethon) работает как обычный клиен
 <details>
 <summary><b>Можно ли отслеживать несколько админов?</b></summary>
 
-В текущей версии — один `ADMIN_USER_ID`. Для нескольких админов потребуется доработка `bot.py` и `config.py`.
+В текущей версии — один `ADMIN_USER_ID`. Для нескольких админов потребуется доработка `handlers/` и `config.py`.
 </details>
 
 ---

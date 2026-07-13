@@ -1,0 +1,17 @@
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP"]
+
+[tool.ruff.lint.per-file-ignores]
+"bot_ui.py" = ["E501", "F821"]
+"setup.py" = ["UP036"]
+"setup/*" = ["E501"]
+"tests/test_chat_resolver.py" = ["E501"]
+"handlers/chats.py" = ["E501"]
+"monitor.py" = ["E501"]
+"database.py" = ["E501"]
+"services/chat_resolver.py" = ["E501"]
+"utils.py" = ["E501"]

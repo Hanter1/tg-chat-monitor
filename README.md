@@ -32,7 +32,7 @@
 | **Android** | `tg-chat-monitor-*-android.apk` | Установить APK → настройки в приложении → Старт |
 | **Windows (ПК)** | `tg-chat-monitor-*-windows.zip` | Распаковать → `install.bat` → `start.bat` |
 
-**Android (кратко):** разрешите установку из неизвестных источников → откройте APK → введите API_ID/API_HASH → Старт → войдите в Telegram → добавьте чаты и слова в приложении → включите мониторинг. Бот опционален (дублирование уведомлений в Telegram).
+**Android (кратко):** установите APK → **«Получить API ID и Hash»** (my.telegram.org) → **«Вставить из буфера»** → Старт → войдите в Telegram → чаты/слова в приложении → мониторинг. Бот опционален.
 
 Подробнее: [docs/android.md](docs/android.md). Как собрать релиз: [docs/releasing.md](docs/releasing.md).
 

@@ -18,8 +18,8 @@ android {
         applicationId = "com.tgchatmonitor.app"
         minSdk = 26
         targetSdk = 35
-        versionCode = 9
-        versionName = "1.0.9"
+        versionCode = 10
+        versionName = "1.0.10"
 
         ndk {
             abiFilters += listOf("arm64-v8a", "x86_64")
@@ -162,6 +162,8 @@ dependencies {
     implementation("androidx.compose.material3:material3-android")
     implementation("androidx.compose.material:material-icons-extended")
     implementation("com.google.android.material:material:1.12.0")
+
+    testImplementation("junit:junit:4.13.2")
 
     debugImplementation("androidx.compose.ui:ui-tooling")
 }

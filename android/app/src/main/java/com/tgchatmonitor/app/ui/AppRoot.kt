@@ -1,15 +1,20 @@
 package com.tgchatmonitor.app.ui
 
+import android.content.ClipboardManager
 import android.content.Intent
 import android.net.Uri
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -27,16 +32,19 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.OpenInNew
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.Chat
+import androidx.compose.material.icons.outlined.ContentPaste
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.History
 import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.Key
+import androidx.compose.material.icons.outlined.OpenInBrowser
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.outlined.Tune
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material.icons.outlined.Visibility
+import androidx.compose.material.icons.outlined.VisibilityOff
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
@@ -48,14 +56,12 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationBarItemDefaults
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -71,21 +77,28 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.core.content.getSystemService
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.tgchatmonitor.app.AuthBroker
+import com.tgchatmonitor.app.CredentialsHelper
 import com.tgchatmonitor.app.EnvStore
 import com.tgchatmonitor.app.PythonBridge
+import com.tgchatmonitor.app.R
 import com.tgchatmonitor.app.ui.theme.Accent
 import com.tgchatmonitor.app.ui.theme.Danger
 import com.tgchatmonitor.app.ui.theme.OnMuted
+import com.tgchatmonitor.app.ui.theme.OnSurface
 import com.tgchatmonitor.app.ui.theme.SlateBg
 import com.tgchatmonitor.app.ui.theme.SlateElevated
 import com.tgchatmonitor.app.ui.theme.SlateSurface
@@ -208,7 +221,9 @@ fun AppRoot(
                     .padding(horizontal = 16.dp),
             ) {
                 Spacer(Modifier.height(12.dp))
-                BrandHeader(subtitle = statusLabel(status, serviceRunning, runtimeReady))
+                BrandHeader(
+                    status = resolveServiceStatus(status, serviceRunning, runtimeReady),
+                )
                 Spacer(Modifier.height(12.dp))
 
                 AnimatedVisibility(visible = flash != null, enter = fadeIn(), exit = fadeOut()) {
@@ -273,77 +288,190 @@ fun AppRoot(
 }
 
 @Composable
-private fun BrandHeader(subtitle: String) {
+private fun BrandHeader(status: StatusInfo) {
     Row(verticalAlignment = Alignment.CenterVertically) {
-        Box(
+        Image(
+            painter = painterResource(R.drawable.ic_launcher_fg),
+            contentDescription = null,
             modifier = Modifier
-                .size(44.dp)
-                .clip(CircleShape)
-                .background(Accent.copy(alpha = 0.18f)),
-            contentAlignment = Alignment.Center,
-        ) {
-            Text("🔭", style = MaterialTheme.typography.titleLarge)
-        }
+                .size(48.dp)
+                .clip(RoundedCornerShape(14.dp))
+                .border(1.dp, Accent.copy(alpha = 0.35f), RoundedCornerShape(14.dp)),
+            contentScale = ContentScale.Crop,
+        )
         Spacer(Modifier.width(12.dp))
         Column {
             Text(
                 "TG Chat Monitor",
                 style = MaterialTheme.typography.headlineMedium,
                 fontWeight = FontWeight.Bold,
+                color = OnSurface,
             )
-            Text(subtitle, color = OnMuted, style = MaterialTheme.typography.bodyMedium)
+            Spacer(Modifier.height(6.dp))
+            StatusBadge(status)
         }
-    }
-}
-
-private fun statusLabel(status: String, serviceRunning: Boolean, runtimeReady: Boolean): String {
-    return when {
-        runtimeReady -> "Подключено · готово к работе"
-        status == "authorizing" -> "Вход в Telegram…"
-        status == "starting" -> "Запуск сервиса…"
-        status == "error" -> "Ошибка сервиса"
-        serviceRunning -> "Сервис работает"
-        else -> "Сервис остановлен"
     }
 }
 
 @Composable
 private fun OnboardingSettings(dataDir: File, onSaved: () -> Unit) {
+    val context = LocalContext.current
     var apiId by remember { mutableStateOf(EnvStore.load(dataDir)["API_ID"].orEmpty()) }
     var apiHash by remember { mutableStateOf(EnvStore.load(dataDir)["API_HASH"].orEmpty()) }
+    var hint by remember { mutableStateOf<String?>(null) }
+    val canContinue = apiId.isNotBlank() && apiHash.isNotBlank()
+
+    fun openAppsPage() {
+        context.startActivity(
+            Intent(Intent.ACTION_VIEW, Uri.parse(CredentialsHelper.MY_TELEGRAM_APPS)),
+        )
+    }
+
+    fun pasteFromClipboard() {
+        val cm = context.getSystemService<ClipboardManager>()
+        val text = cm?.primaryClip?.takeIf { it.itemCount > 0 }
+            ?.getItemAt(0)?.coerceToText(context)?.toString().orEmpty()
+        val parsed = CredentialsHelper.parse(text)
+        if (!parsed.hasAnything) {
+            hint = "В буфере нет API ID / Hash. Скопируйте их со страницы my.telegram.org"
+            return
+        }
+        parsed.apiId?.let { apiId = it }
+        parsed.apiHash?.let { apiHash = it }
+        hint = when {
+            parsed.apiId != null && parsed.apiHash != null -> "Готово: ID и Hash вставлены из буфера"
+            parsed.apiId != null -> "API ID вставлен — скопируйте ещё Hash"
+            else -> "API Hash вставлен — скопируйте ещё ID"
+        }
+    }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState()),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
+        verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
         Panel {
-            Text("Добро пожаловать", style = MaterialTheme.typography.titleLarge)
+            Text("Быстрый старт", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
             Spacer(Modifier.height(6.dp))
             Text(
-                "Нужны только API ID и API Hash с my.telegram.org. Бот необязателен — уведомления приходят из приложения.",
+                "Нужны только API ID и API Hash. Бот не обязателен — уведомления приходят из приложения.",
                 color = OnMuted,
             )
         }
-        Field("API ID", apiId, KeyboardType.Number) { apiId = it }
-        Field("API Hash", apiHash, KeyboardType.Password, password = true) { apiHash = it }
-        Button(
+
+        Panel {
+            StepRow(1, "Откройте страницу Telegram API")
+            Spacer(Modifier.height(10.dp))
+            PrimaryButton(
+                onClick = { openAppsPage() },
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Icon(Icons.Outlined.OpenInBrowser, contentDescription = null)
+                Spacer(Modifier.width(8.dp))
+                Text("Получить API ID и Hash", fontWeight = FontWeight.SemiBold)
+            }
+            Spacer(Modifier.height(8.dp))
+            Text(
+                "Войдите на my.telegram.org → Apps → создайте приложение, если ещё нет. " +
+                    "Скопируйте App api_id и App api_hash.",
+                color = OnMuted,
+                style = MaterialTheme.typography.bodyMedium,
+            )
+        }
+
+        Panel {
+            StepRow(2, "Вставьте данные в приложение")
+            Spacer(Modifier.height(10.dp))
+            SecondaryButton(
+                onClick = { pasteFromClipboard() },
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Icon(Icons.Outlined.ContentPaste, contentDescription = null)
+                Spacer(Modifier.width(8.dp))
+                Text("Вставить из буфера")
+            }
+            Spacer(Modifier.height(12.dp))
+            Field(
+                label = "API ID",
+                value = apiId,
+                keyboardType = KeyboardType.Number,
+                onPaste = {
+                    val pasted = readClipboard(context)
+                    val p = CredentialsHelper.parse(pasted)
+                    apiId = p.apiId ?: pasted.filter { it.isDigit() }.ifBlank { apiId }
+                },
+            ) { apiId = it.filter { ch -> ch.isDigit() } }
+            Field(
+                label = "API Hash",
+                value = apiHash,
+                keyboardType = KeyboardType.Ascii,
+                password = true,
+                onPaste = {
+                    val pasted = readClipboard(context)
+                    val p = CredentialsHelper.parse(pasted)
+                    apiHash = p.apiHash ?: pasted.trim()
+                },
+            ) { apiHash = it.trim() }
+
+            AnimatedVisibility(visible = hint != null) {
+                Text(
+                    hint.orEmpty(),
+                    color = Success,
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.padding(top = 8.dp),
+                )
+            }
+        }
+
+        PrimaryButton(
             onClick = {
                 EnvStore.save(
                     dataDir,
                     mapOf(
-                        "API_ID" to apiId,
-                        "API_HASH" to apiHash,
+                        "API_ID" to apiId.trim(),
+                        "API_HASH" to apiHash.trim(),
                         "TELEGRAM_NOTIFY" to "0",
                     ),
                 )
                 onSaved()
             },
-            enabled = apiId.isNotBlank() && apiHash.isNotBlank(),
+            enabled = canContinue,
             modifier = Modifier.fillMaxWidth(),
-            colors = ButtonDefaults.buttonColors(containerColor = Accent),
-        ) { Text("Продолжить") }
+        ) {
+            Text("Продолжить", fontWeight = FontWeight.Bold)
+        }
+        Spacer(Modifier.height(24.dp))
     }
+}
+
+@Composable
+private fun StepRow(number: Int, title: String) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Box(
+            modifier = Modifier
+                .size(28.dp)
+                .clip(CircleShape)
+                .background(Accent.copy(alpha = 0.2f)),
+            contentAlignment = Alignment.Center,
+        ) {
+            Text(
+                number.toString(),
+                color = Accent,
+                fontWeight = FontWeight.Bold,
+                style = MaterialTheme.typography.labelLarge,
+            )
+        }
+        Spacer(Modifier.width(10.dp))
+        Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+    }
+}
+
+private fun readClipboard(context: android.content.Context): String {
+    val cm = context.getSystemService<ClipboardManager>() ?: return ""
+    val clip = cm.primaryClip ?: return ""
+    if (clip.itemCount == 0) return ""
+    return clip.getItemAt(0).coerceToText(context).toString()
 }
 
 @Composable
@@ -384,22 +512,20 @@ private fun HomePane(
     ) {
         Panel {
             Text("Сервис", style = MaterialTheme.typography.titleMedium)
-            Spacer(Modifier.height(4.dp))
-            Text("Статус: $status", color = OnMuted)
+            Spacer(Modifier.height(8.dp))
+            StatusBadge(resolveServiceStatus(status, serviceRunning, runtimeReady))
             if (error.isNotBlank()) {
+                Spacer(Modifier.height(8.dp))
                 Text(error, color = Danger, style = MaterialTheme.typography.bodyMedium)
             }
             Spacer(Modifier.height(12.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 if (!serviceRunning) {
-                    Button(
-                        onClick = onStartService,
-                        colors = ButtonDefaults.buttonColors(containerColor = Accent),
-                    ) { Text("Старт") }
+                    PrimaryButton(onClick = onStartService) { Text("Старт", fontWeight = FontWeight.SemiBold) }
                 } else {
-                    OutlinedButton(onClick = onStopService) { Text("Стоп сервиса") }
+                    SecondaryButton(onClick = onStopService) { Text("Стоп сервиса") }
                 }
-                TextButton(onClick = onOpenBatterySettings) { Text("Батарея") }
+                QuietTextButton(onClick = onOpenBatterySettings) { Text("Батарея") }
             }
         }
 
@@ -412,20 +538,17 @@ private fun HomePane(
             val monitorOn = dash?.optBoolean("monitor_running") == true
             Panel {
                 Text("Мониторинг", style = MaterialTheme.typography.titleMedium)
-                Spacer(Modifier.height(8.dp))
+                Spacer(Modifier.height(10.dp))
+                StatusBadge(resolveMonitorStatus(monitorOn))
+                Spacer(Modifier.height(12.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                     StatChip("Чаты", stats?.optInt("active_chats")?.toString() ?: "—")
                     StatChip("Слова", stats?.optInt("words")?.toString() ?: "—")
                     StatChip("Сегодня", stats?.optInt("matches_today")?.toString() ?: "—")
                 }
-                Spacer(Modifier.height(12.dp))
-                Text(
-                    if (monitorOn) "● Мониторинг включён" else "○ Мониторинг выключен",
-                    color = if (monitorOn) Success else OnMuted,
-                )
-                Spacer(Modifier.height(10.dp))
+                Spacer(Modifier.height(14.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Button(
+                    PrimaryButton(
                         enabled = !busy && !monitorOn,
                         onClick = {
                             busy = true
@@ -438,9 +561,9 @@ private fun HomePane(
                                 else onFlash(r?.error ?: "Не удалось запустить")
                             }
                         },
-                        colors = ButtonDefaults.buttonColors(containerColor = Accent),
-                    ) { Text("Включить") }
-                    OutlinedButton(
+                        modifier = Modifier.weight(1f),
+                    ) { Text("Включить", fontWeight = FontWeight.SemiBold) }
+                    SecondaryButton(
                         enabled = !busy && monitorOn,
                         onClick = {
                             busy = true
@@ -452,6 +575,7 @@ private fun HomePane(
                                 onFlash("Мониторинг остановлен")
                             }
                         },
+                        modifier = Modifier.weight(1f),
                     ) { Text("Выключить") }
                 }
             }
@@ -469,7 +593,7 @@ private fun HomePane(
                     "Нажмите «Старт», войдите в Telegram — и управляйте чатами прямо в приложении.",
                     color = OnMuted,
                 )
-                TextButton(onClick = onNeedSettings) { Text("Открыть настройки") }
+                QuietTextButton(onClick = onNeedSettings) { Text("Открыть настройки") }
             }
         }
         Spacer(Modifier.height(24.dp))
@@ -494,15 +618,14 @@ private fun AuthPanel(kind: AuthBroker.PromptKind, onSubmit: (String) -> Unit) {
             if (kind == AuthBroker.PromptKind.PHONE) KeyboardType.Phone else KeyboardType.Text,
             password = kind == AuthBroker.PromptKind.PASSWORD,
         ) { value = it }
-        Button(
+        PrimaryButton(
             onClick = {
                 onSubmit(value.trim())
                 value = ""
             },
             enabled = value.isNotBlank(),
             modifier = Modifier.fillMaxWidth(),
-            colors = ButtonDefaults.buttonColors(containerColor = Accent),
-        ) { Text("Отправить") }
+        ) { Text("Отправить", fontWeight = FontWeight.SemiBold) }
     }
 }
 
@@ -567,8 +690,10 @@ private fun ChatsPane(
                 if (!loading && chats.isEmpty()) {
                     item {
                         Panel {
-                            Text("Пока нет чатов", style = MaterialTheme.typography.titleMedium)
-                            Text("Добавьте группы из списка диалогов Telegram.", color = OnMuted)
+                            EmptyHint(
+                                title = "Пока нет чатов",
+                                body = "Добавьте группы из списка диалогов Telegram.",
+                            )
                         }
                     }
                 }
@@ -671,7 +796,7 @@ private fun DiscoverSheet(
                 label = { Text("@username / ссылка / id") },
                 colors = fieldColors(),
             )
-            TextButton(
+            QuietTextButton(
                 onClick = {
                     scope.launch {
                         val r = withContext(Dispatchers.IO) {
@@ -723,11 +848,11 @@ private fun DiscoverSheet(
                     Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
                 ) {
-                    TextButton(onClick = { if (page > 0) load(page - 1) }, enabled = page > 0) {
+                    QuietTextButton(onClick = { if (page > 0) load(page - 1) }, enabled = page > 0) {
                         Text("Назад")
                     }
                     Text("${page + 1} / ${((total + 7) / 8).coerceAtLeast(1)}", color = OnMuted)
-                    TextButton(
+                    QuietTextButton(
                         onClick = { if ((page + 1) * 8 < total) load(page + 1) },
                         enabled = (page + 1) * 8 < total,
                     ) { Text("Далее") }
@@ -738,6 +863,7 @@ private fun DiscoverSheet(
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun WordsPane(
     runtimeReady: Boolean,
@@ -764,7 +890,11 @@ private fun WordsPane(
         return
     }
 
-    Column(Modifier.fillMaxSize()) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState()),
+    ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -774,9 +904,11 @@ private fun WordsPane(
                 onValueChange = { draft = it },
                 modifier = Modifier.weight(1f),
                 label = { Text("Ключевое слово") },
+                singleLine = true,
+                shape = AppButtonShape,
                 colors = fieldColors(),
             )
-            Button(
+            PrimaryButton(
                 onClick = {
                     scope.launch {
                         withContext(Dispatchers.IO) {
@@ -788,46 +920,44 @@ private fun WordsPane(
                     }
                 },
                 enabled = draft.isNotBlank(),
-                colors = ButtonDefaults.buttonColors(containerColor = Accent),
             ) { Text("Добавить") }
         }
-        Spacer(Modifier.height(12.dp))
-        LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            items(words, key = { it }) { word ->
-                Panel {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(word, Modifier.weight(1f), style = MaterialTheme.typography.titleMedium)
-                        IconButton(
-                            onClick = {
-                                scope.launch {
-                                    withContext(Dispatchers.IO) {
-                                        bridgeProvider()?.callJson("remove_word", word)
-                                    }
-                                    reload()
-                                }
-                            },
-                        ) {
-                            Icon(Icons.Outlined.Delete, null, tint = Danger)
-                        }
-                    }
-                }
+        Spacer(Modifier.height(16.dp))
+        if (words.isEmpty()) {
+            Panel {
+                EmptyHint(
+                    title = "Список пуст",
+                    body = "Добавьте слова для поиска в чатах.",
+                )
             }
-            if (words.isEmpty()) {
-                item {
-                    Panel {
-                        Text("Список пуст", style = MaterialTheme.typography.titleMedium)
-                        Text("Добавьте слова для поиска в чатах.", color = OnMuted)
-                    }
+        } else {
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                words.forEach { word ->
+                    KeywordChip(
+                        word = word,
+                        onRemove = {
+                            scope.launch {
+                                withContext(Dispatchers.IO) {
+                                    bridgeProvider()?.callJson("remove_word", word)
+                                }
+                                reload()
+                            }
+                        },
+                    )
                 }
             }
         }
+        Spacer(Modifier.height(24.dp))
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun MatchesPane(runtimeReady: Boolean, bridgeProvider: () -> PythonBridge?) {
     val context = LocalContext.current
-    val scope = rememberCoroutineScope()
     var matches by remember { mutableStateOf<List<JSONObject>>(emptyList()) }
 
     LaunchedEffect(runtimeReady) {
@@ -847,26 +977,87 @@ private fun MatchesPane(runtimeReady: Boolean, bridgeProvider: () -> PythonBridg
 
     LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         items(matches, key = { it.optInt("id") }) { m ->
-            Panel {
-                Text(m.optString("chat_title"), style = MaterialTheme.typography.titleMedium)
-                Text("🔑 ${m.optString("keywords")}", color = Accent)
-                Spacer(Modifier.height(4.dp))
-                Text(m.optString("text_preview"), color = OnMuted, maxLines = 3)
-                val link = m.optString("message_link")
-                if (link.isNotBlank()) {
-                    TextButton(
-                        onClick = {
-                            context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(link)))
-                        },
-                    ) { Text("Открыть сообщение") }
-                }
-            }
+            MatchRow(
+                match = m,
+                onOpen = {
+                    val link = m.optString("message_link")
+                    if (link.isNotBlank()) {
+                        context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(link)))
+                    }
+                },
+            )
         }
         if (matches.isEmpty()) {
             item {
                 Panel {
-                    Text("Журнал пуст", style = MaterialTheme.typography.titleMedium)
-                    Text("Совпадения появятся здесь и в уведомлениях.", color = OnMuted)
+                    EmptyHint(
+                        title = "Журнал пуст",
+                        body = "Совпадения появятся здесь и в уведомлениях.",
+                    )
+                }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun MatchRow(match: JSONObject, onOpen: () -> Unit) {
+    val keywords = match.optString("keywords")
+        .split(',')
+        .map { it.trim() }
+        .filter { it.isNotBlank() }
+    val link = match.optString("message_link")
+    val whenLabel = formatMatchTime(match.optString("created_at"))
+
+    Panel {
+        Row(verticalAlignment = Alignment.Top) {
+            Column(Modifier.weight(1f)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        match.optString("chat_title"),
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f),
+                    )
+                    if (whenLabel.isNotBlank()) {
+                        Text(
+                            whenLabel,
+                            color = OnMuted,
+                            style = MaterialTheme.typography.labelLarge,
+                        )
+                    }
+                }
+                if (keywords.isNotEmpty()) {
+                    Spacer(Modifier.height(8.dp))
+                    FlowRow(
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        verticalArrangement = Arrangement.spacedBy(6.dp),
+                    ) {
+                        keywords.forEach { KeywordTag(it) }
+                    }
+                }
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    match.optString("text_preview"),
+                    color = OnMuted,
+                    style = MaterialTheme.typography.bodyMedium,
+                    maxLines = 3,
+                )
+            }
+            if (link.isNotBlank() && link != "null") {
+                IconButton(onClick = onOpen) {
+                    Icon(
+                        Icons.Outlined.OpenInNew,
+                        contentDescription = "Открыть сообщение",
+                        tint = Accent,
+                    )
                 }
             }
         }
@@ -881,6 +1072,7 @@ private fun MorePane(
     onFlash: (String) -> Unit,
     onOpenBatterySettings: () -> Unit,
 ) {
+    val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val stored = remember { EnvStore.load(dataDir) }
     var apiId by remember { mutableStateOf(stored["API_ID"].orEmpty()) }
@@ -909,12 +1101,59 @@ private fun MorePane(
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         Panel {
-            Text("Credentials", style = MaterialTheme.typography.titleMedium)
+            Text("Telegram API", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+            Spacer(Modifier.height(6.dp))
+            Text(
+                "Не хватает данных? Откройте страницу и вставьте из буфера.",
+                color = OnMuted,
+                style = MaterialTheme.typography.bodyMedium,
+            )
+            Spacer(Modifier.height(10.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                SecondaryButton(
+                    onClick = {
+                        context.startActivity(
+                            Intent(Intent.ACTION_VIEW, Uri.parse(CredentialsHelper.MY_TELEGRAM_APPS)),
+                        )
+                    },
+                    modifier = Modifier.weight(1f),
+                ) {
+                    Icon(Icons.Outlined.OpenInBrowser, null, modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.width(6.dp))
+                    Text("Получить")
+                }
+                SecondaryButton(
+                    onClick = {
+                        val parsed = CredentialsHelper.parse(readClipboard(context))
+                        if (!parsed.hasAnything) {
+                            onFlash("В буфере нет API ID / Hash")
+                        } else {
+                            parsed.apiId?.let { apiId = it }
+                            parsed.apiHash?.let { apiHash = it }
+                            onFlash("Вставлено из буфера")
+                        }
+                    },
+                    modifier = Modifier.weight(1f),
+                ) {
+                    Icon(Icons.Outlined.ContentPaste, null, modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.width(6.dp))
+                    Text("Вставить")
+                }
+            }
             Spacer(Modifier.height(8.dp))
-            Field("API ID", apiId, KeyboardType.Number) { apiId = it }
-            Field("API Hash", apiHash, KeyboardType.Password, password = true) { apiHash = it }
+            Field("API ID", apiId, KeyboardType.Number) { apiId = it.filter { ch -> ch.isDigit() } }
+            Field("API Hash", apiHash, KeyboardType.Ascii, password = true) { apiHash = it.trim() }
             Field("BOT_TOKEN (опционально)", botToken, KeyboardType.Password, password = true) {
                 botToken = it
+            }
+            QuietTextButton(
+                onClick = {
+                    context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(CredentialsHelper.BOT_FATHER)))
+                },
+            ) {
+                Icon(Icons.Outlined.OpenInBrowser, null, modifier = Modifier.size(16.dp))
+                Spacer(Modifier.width(6.dp))
+                Text("Открыть @BotFather для токена")
             }
             Row(
                 verticalAlignment = Alignment.CenterVertically,
@@ -930,7 +1169,7 @@ private fun MorePane(
                     colors = SwitchDefaults.colors(checkedTrackColor = Accent),
                 )
             }
-            Button(
+            PrimaryButton(
                 onClick = {
                     EnvStore.save(
                         dataDir,
@@ -945,8 +1184,7 @@ private fun MorePane(
                     onFlash("Сохранено. Перезапустите сервис при смене токена.")
                 },
                 modifier = Modifier.fillMaxWidth(),
-                colors = ButtonDefaults.buttonColors(containerColor = Accent),
-            ) { Text("Сохранить .env") }
+            ) { Text("Сохранить .env", fontWeight = FontWeight.SemiBold) }
         }
 
         if (runtimeReady) {
@@ -968,7 +1206,7 @@ private fun MorePane(
                         )
                     }
                 }
-                Button(
+                PrimaryButton(
                     onClick = {
                         scope.launch {
                             val payload = JSONObject()
@@ -983,15 +1221,14 @@ private fun MorePane(
                         }
                     },
                     modifier = Modifier.fillMaxWidth(),
-                    colors = ButtonDefaults.buttonColors(containerColor = Accent),
-                ) { Text("Применить") }
+                ) { Text("Применить", fontWeight = FontWeight.SemiBold) }
             }
 
             Panel {
                 Text("Скан истории", style = MaterialTheme.typography.titleMedium)
                 Text("Найти совпадения в уже существующих сообщениях.", color = OnMuted)
                 Spacer(Modifier.height(8.dp))
-                Button(
+                PrimaryButton(
                     enabled = !scanning,
                     onClick = {
                         scanning = true
@@ -1011,7 +1248,7 @@ private fun MorePane(
                             }
                         }
                     },
-                    colors = ButtonDefaults.buttonColors(containerColor = Accent),
+                    modifier = Modifier.fillMaxWidth(),
                 ) {
                     Text(if (scanning) "Сканирование…" else "Запустить скан")
                 }
@@ -1020,7 +1257,7 @@ private fun MorePane(
 
         Panel {
             Text("Система", style = MaterialTheme.typography.titleMedium)
-            TextButton(onClick = onOpenBatterySettings) {
+            QuietTextButton(onClick = onOpenBatterySettings) {
                 Icon(Icons.Outlined.Settings, null)
                 Spacer(Modifier.width(8.dp))
                 Text("Исключить из оптимизации батареи")
@@ -1033,8 +1270,10 @@ private fun MorePane(
 @Composable
 private fun NeedRuntime() {
     Panel {
-        Text("Сервис не запущен", style = MaterialTheme.typography.titleMedium)
-        Text("Откройте «Главная» и нажмите Старт, затем войдите в Telegram.", color = OnMuted)
+        EmptyHint(
+            title = "Сервис не запущен",
+            body = "Откройте «Главная» и нажмите Старт, затем войдите в Telegram.",
+        )
     }
 }
 
@@ -1043,9 +1282,14 @@ private fun Panel(content: @Composable () -> Unit) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
-            .background(SlateSurface.copy(alpha = 0.92f))
-            .padding(14.dp),
+            .clip(RoundedCornerShape(18.dp))
+            .background(
+                Brush.verticalGradient(
+                    listOf(SlateSurface, SlateElevated.copy(alpha = 0.55f)),
+                ),
+            )
+            .border(1.dp, Accent.copy(alpha = 0.12f), RoundedCornerShape(18.dp))
+            .padding(16.dp),
         content = { content() },
     )
 }
@@ -1069,8 +1313,10 @@ private fun Field(
     value: String,
     keyboardType: KeyboardType,
     password: Boolean = false,
+    onPaste: (() -> Unit)? = null,
     onChange: (String) -> Unit,
 ) {
+    var showPassword by remember { mutableStateOf(false) }
     OutlinedTextField(
         value = value,
         onValueChange = onChange,
@@ -1080,7 +1326,30 @@ private fun Field(
         label = { Text(label) },
         singleLine = true,
         keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
-        visualTransformation = if (password) PasswordVisualTransformation() else VisualTransformation.None,
+        visualTransformation = if (password && !showPassword) {
+            PasswordVisualTransformation()
+        } else {
+            VisualTransformation.None
+        },
+        trailingIcon = {
+            Row {
+                if (password) {
+                    IconButton(onClick = { showPassword = !showPassword }) {
+                        Icon(
+                            if (showPassword) Icons.Outlined.VisibilityOff else Icons.Outlined.Visibility,
+                            contentDescription = null,
+                            tint = OnMuted,
+                        )
+                    }
+                }
+                if (onPaste != null) {
+                    IconButton(onClick = onPaste) {
+                        Icon(Icons.Outlined.ContentPaste, contentDescription = "Вставить", tint = Accent)
+                    }
+                }
+            }
+        },
+        shape = RoundedCornerShape(14.dp),
         colors = fieldColors(),
     )
 }
@@ -1088,9 +1357,12 @@ private fun Field(
 @Composable
 private fun fieldColors() = OutlinedTextFieldDefaults.colors(
     focusedBorderColor = Accent,
-    unfocusedBorderColor = OnMuted.copy(alpha = 0.35f),
+    unfocusedBorderColor = OnMuted.copy(alpha = 0.28f),
     focusedLabelColor = Accent,
+    unfocusedLabelColor = OnMuted,
     cursorColor = Accent,
+    focusedContainerColor = SlateBg.copy(alpha = 0.35f),
+    unfocusedContainerColor = Color.Transparent,
 )
 
 private fun JSONArray.toObjList(): List<JSONObject> =

@@ -244,7 +244,7 @@ private fun StatusCard(
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
         modifier = Modifier.fillMaxWidth(),
     ) {
-        Column(Modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text("Статус: $status", style = MaterialTheme.typography.titleMedium)
             Text(if (configured) "Настройки: OK" else "Настройки: не заполнены")
             Text(if (serviceRunning) "Сервис: работает" else "Сервис: остановлен")
@@ -283,7 +283,7 @@ private fun AuthCard(
     }
     val isPassword = kind == AuthBroker.PromptKind.PASSWORD
     Card(modifier = Modifier.fillMaxWidth()) {
-        Column(Modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text("Вход Telethon", style = MaterialTheme.typography.titleMedium)
             OutlinedTextField(
                 value = value,

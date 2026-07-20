@@ -39,7 +39,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Modifier.Modifier
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
@@ -73,14 +73,17 @@ class MainActivity : ComponentActivity() {
                     authBrokerProvider = { MonitorService.instanceAuthBroker },
                     serviceRunningProvider = { MonitorService.isRunning },
                     statusProvider = {
-                        if (!Python.isStarted()) return@statusProvider "idle"
-                        try {
-                            Python.getInstance()
-                                .getModule("android_bridge")
-                                .callAttr("get_status")
-                                .toString()
-                        } catch (_: Exception) {
-                            if (MonitorService.isRunning) "starting" else "idle"
+                        if (!Python.isStarted()) {
+                            "idle"
+                        } else {
+                            try {
+                                Python.getInstance()
+                                    .getModule("android_bridge")
+                                    .callAttr("get_status")
+                                    .toString()
+                            } catch (_: Exception) {
+                                if (MonitorService.isRunning) "starting" else "idle"
+                            }
                         }
                     },
                     errorProvider = {

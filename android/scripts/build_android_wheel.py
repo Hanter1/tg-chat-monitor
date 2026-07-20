@@ -149,8 +149,9 @@ def setup_python_cross_build(
     """Downloads and extracts pre-built CPython for cross-compilation."""
     print(f"--- Setting up pre-built Python {python_version} for {target_triplet} ---", flush=True)
 
-    # Per user instruction, the final library path is always in this structure.
-    lib_dir = download_path / "prefix" / "lib"
+    # Namespace by target triplet so arm64 and x86_64 caches never collide.
+    target_root = download_path / target_triplet
+    lib_dir = target_root / "prefix" / "lib"
 
     # Caching check: if the final lib directory exists, assume it's valid and skip everything.
     if lib_dir.is_dir():
@@ -167,7 +168,10 @@ def setup_python_cross_build(
     file_name = ""
 
     if minor < 13:
-        raise ValueError(f"Python < 3.13 is not supported for pre-built downloads. Please build it yourself.")
+        raise ValueError(
+            "Python < 3.13 is not supported for pre-built downloads. "
+            "Please build it yourself."
+        )
     elif minor == 13:
         print("Python 3.13: Using pre-built from ririv/android-wheels.", flush=True)
         python_version_map = {"3.13": "3.13.9"}
@@ -175,7 +179,10 @@ def setup_python_cross_build(
         if not full_python_version:
             raise ValueError(f"Could not determine full version for Python {python_version}")
         file_name = f"python-{full_python_version}-{target_triplet}.tar.gz"
-        download_url = f"https://raw.githubusercontent.com/ririv/android-wheels/cpython-android/{python_version}/{file_name}"
+        download_url = (
+            "https://raw.githubusercontent.com/ririv/android-wheels/"
+            f"cpython-android/{python_version}/{file_name}"
+        )
     else:  # minor >= 14
         print("Python >= 3.14: Using pre-built from python.org.", flush=True)
         full_python_version = get_latest_patch_for_python(python_version)
@@ -191,15 +198,22 @@ def setup_python_cross_build(
             print(f"Failed to download: {e}", flush=True)
             if minor >= 14 and e.code == 404:
                 print(f"Could not find version {full_python_version} on python.org.", flush=True)
-                print("Please check the python.org FTP for the correct version and update the script if scraping failed.", flush=True)
+                print(
+                    "Please check the python.org FTP for the correct version "
+                    "and update the script if scraping failed.",
+                    flush=True,
+                )
             raise
 
-    print(f"Extracting {archive_path} to {download_path}", flush=True)
-    shutil.unpack_archive(archive_path, download_path)
+    target_root.mkdir(parents=True, exist_ok=True)
+    print(f"Extracting {archive_path} to {target_root}", flush=True)
+    shutil.unpack_archive(archive_path, target_root)
 
     # Final check: The lib directory MUST exist now.
     if not lib_dir.is_dir():
-        raise FileNotFoundError(f"Could not locate 'prefix/lib' directory at {lib_dir} after extraction.")
+        raise FileNotFoundError(
+            f"Could not locate 'prefix/lib' directory at {lib_dir} after extraction."
+        )
 
     print(f"Found pre-built Python lib dir: {lib_dir}", flush=True)
     return lib_dir

@@ -51,12 +51,50 @@ jobs:
           distribution: temurin
           java-version: "17"
 
+      # Must match chaquopy.defaultConfig.version (buildPython + app Python).
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.12"
+          python-version: "3.13"
 
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
+
+      - name: Setup Android NDK
+        uses: nttld/setup-ndk@v1
+        id: setup-ndk
+        with:
+          ndk-version: r26d
+          link-to-sdk: true
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-linux-android,x86_64-linux-android
+
+      - name: Checkout pydantic-core for Android wheels
+        uses: actions/checkout@v4
+        with:
+          repository: pydantic/pydantic-core
+          ref: v2.46.4
+          path: pydantic-core-src
+
+      - name: Build pydantic-core Android wheels
+        uses: pypa/cibuildwheel@v3.2.1
+        with:
+          package-dir: pydantic-core-src
+          output-dir: android/wheels
+        env:
+          CIBW_PLATFORM: android
+          CIBW_BUILD: cp313-*
+          CIBW_ARCHS: arm64_v8a x86_64
+          CIBW_TEST_SKIP: "*"
+          CIBW_BUILD_VERBOSITY: 1
+          ANDROID_NDK_HOME: ${{ steps.setup-ndk.outputs.ndk-path }}
+          ANDROID_NDK_ROOT: ${{ steps.setup-ndk.outputs.ndk-path }}
+          ANDROID_API_LEVEL: "24"
+
+      - name: List Android wheels
+        run: ls -la wheels
 
       - name: Prepare release keystore
         id: keystore

@@ -32,6 +32,19 @@ keytool -genkey -v \
 
 Без этих secrets workflow всё равно соберёт **debug APK** и Windows ZIP.
 
+## Android pip / Chaquopy
+
+Сборка APK ставит зависимости из `android/requirements-android.txt` через Chaquopy.
+
+Два пакета нельзя взять «как есть» с PyPI для Android:
+
+| Пакет | Почему | Откуда берём |
+|-------|--------|--------------|
+| `pyaes` | на PyPI только sdist | `android/wheels/pyaes-*.whl` (в git) |
+| `pydantic-core` | Rust, нужны Android-wheels | CI собирает через `cibuildwheel` (Python 3.13) перед Gradle |
+
+Chaquopy в APK использует **Python 3.13** (`android/app/build.gradle.kts`).
+
 ## Как выпустить
 
 ```bash

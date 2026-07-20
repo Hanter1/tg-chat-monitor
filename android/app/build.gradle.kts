@@ -94,9 +94,14 @@ android {
 
 chaquopy {
     defaultConfig {
-        version = "3.12"
+        // 3.13: better Android wheel coverage for native deps (aiohttp, etc.).
+        version = "3.13"
         pip {
-            // Path relative to android/app module directory.
+            // pyaes (sdist-only on PyPI) + pydantic-core (Rust) live in android/wheels.
+            options(
+                "--find-links",
+                rootProject.file("wheels").absolutePath,
+            )
             install("-r", rootProject.file("requirements-android.txt").absolutePath)
         }
     }

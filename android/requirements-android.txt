@@ -7,7 +7,8 @@ sqlalchemy>=2.0.0,<3
 aiosqlite>=0.19.0
 python-dotenv>=1.0.0
 pyaes==1.6.1
-pydantic==2.13.4
-pydantic-core==2.46.4
+# pydantic-core 2.41.5 is the last tag on pydantic/pydantic-core (standalone repo).
+pydantic==2.12.5
+pydantic-core==2.41.5
 # Pin to Chaquopy-provided Android wheel (avoids newer pure deps without wheels).
 aiohttp==3.10.10

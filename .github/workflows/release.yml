@@ -71,11 +71,13 @@ jobs:
         with:
           targets: aarch64-linux-android,x86_64-linux-android
 
+      # Last standalone tag before core moved into pydantic/pydantic monorepo.
+      # Must match pydantic-core pin in android/requirements-android.txt.
       - name: Checkout pydantic-core for Android wheels
         uses: actions/checkout@v4
         with:
           repository: pydantic/pydantic-core
-          ref: v2.46.4
+          ref: v2.41.5
           path: pydantic-core-src
 
       - name: Build pydantic-core Android wheels

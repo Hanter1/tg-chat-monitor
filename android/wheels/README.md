@@ -7,5 +7,5 @@ Chaquopy’s Android pip cannot install some packages from PyPI as-is:
 
 Wheels in this directory are passed to pip via `--find-links`.
 
-`pyaes` is committed here. `pydantic-core` Android wheels are built in CI
-(see `.github/workflows/release.yml`) and placed here before Gradle runs.
+`pyaes` is committed here. `pydantic-core` (tag `v2.41.5`) Android wheels are
+built in CI (see `.github/workflows/release.yml`) and placed here before Gradle runs.

@@ -41,7 +41,7 @@ keytool -genkey -v \
 | Пакет | Почему | Откуда берём |
 |-------|--------|--------------|
 | `pyaes` | на PyPI только sdist | `android/wheels/pyaes-*.whl` (в git) |
-| `pydantic-core` | Rust, нужны Android-wheels | CI собирает через `cibuildwheel` (Python 3.13) перед Gradle |
+| `pydantic-core` | Rust, нужны Android-wheels | CI собирает `v2.41.5` через `cibuildwheel` (Python 3.13) перед Gradle |
 
 Chaquopy в APK использует **Python 3.13** (`android/app/build.gradle.kts`).
 

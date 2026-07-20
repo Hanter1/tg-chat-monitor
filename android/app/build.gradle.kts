@@ -152,10 +152,14 @@ dependencies {
     implementation("androidx.core:core-ktx:1.15.0")
     implementation("androidx.activity:activity-compose:1.9.3")
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.8.7")
+    implementation("androidx.lifecycle:lifecycle-runtime-compose:2.8.7")
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.7")
-    implementation("androidx.compose.ui:ui")
-    implementation("androidx.compose.ui:ui-tooling-preview")
-    implementation("androidx.compose.material3:material3")
+    // Explicit Android artifacts: Chaquopy + KMP metadata can leave
+    // plain "ui"/"foundation" without Modifier on the compile classpath.
+    implementation("androidx.compose.ui:ui-android")
+    implementation("androidx.compose.ui:ui-tooling-preview-android")
+    implementation("androidx.compose.foundation:foundation-android")
+    implementation("androidx.compose.material3:material3-android")
     implementation("androidx.compose.material:material-icons-extended")
     implementation("com.google.android.material:material:1.12.0")
 

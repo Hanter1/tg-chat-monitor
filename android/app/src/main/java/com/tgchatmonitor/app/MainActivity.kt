@@ -73,7 +73,7 @@ class MainActivity : ComponentActivity() {
                     authBrokerProvider = { MonitorService.instanceAuthBroker },
                     serviceRunningProvider = { MonitorService.isRunning },
                     statusProvider = {
-                        if (!Python.isStarted()) return@AppScreen "idle"
+                        if (!Python.isStarted()) return@statusProvider "idle"
                         try {
                             Python.getInstance()
                                 .getModule("android_bridge")

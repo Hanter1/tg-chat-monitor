@@ -48,9 +48,11 @@ import androidx.compose.material.icons.outlined.VisibilityOff
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.NavigationBar
@@ -64,6 +66,7 @@ import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -175,6 +178,7 @@ fun AppRoot(
     ) {
         Scaffold(
             containerColor = Color.Transparent,
+            contentColor = OnSurface,
             bottomBar = {
                 if (configured) {
                     NavigationBar(containerColor = SlateSurface.copy(alpha = 0.96f)) {
@@ -227,12 +231,22 @@ fun AppRoot(
                 Spacer(Modifier.height(12.dp))
 
                 AnimatedVisibility(visible = flash != null, enter = fadeIn(), exit = fadeOut()) {
-                    Text(
-                        flash.orEmpty(),
-                        color = Success,
-                        style = MaterialTheme.typography.bodyMedium,
-                        modifier = Modifier.padding(bottom = 8.dp),
-                    )
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = 8.dp)
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(Success.copy(alpha = 0.16f))
+                            .border(1.dp, Success.copy(alpha = 0.35f), RoundedCornerShape(12.dp))
+                            .padding(horizontal = 12.dp, vertical = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(
+                            flash.orEmpty(),
+                            color = Success,
+                            style = MaterialTheme.typography.bodyMedium,
+                        )
+                    }
                 }
 
                 if (!configured) {
@@ -352,7 +366,12 @@ private fun OnboardingSettings(dataDir: File, onSaved: () -> Unit) {
         verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
         Panel {
-            Text("Быстрый старт", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+            Text(
+                "Быстрый старт",
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold,
+                color = OnSurface,
+            )
             Spacer(Modifier.height(6.dp))
             Text(
                 "Нужны только API ID и API Hash. Бот не обязателен — уведомления приходят из приложения.",
@@ -511,7 +530,12 @@ private fun HomePane(
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         Panel {
-            Text("Сервис", style = MaterialTheme.typography.titleMedium)
+            Text(
+                "Сервис",
+                style = MaterialTheme.typography.titleMedium,
+                color = OnSurface,
+                fontWeight = FontWeight.SemiBold,
+            )
             Spacer(Modifier.height(8.dp))
             StatusBadge(resolveServiceStatus(status, serviceRunning, runtimeReady))
             if (error.isNotBlank()) {
@@ -537,7 +561,12 @@ private fun HomePane(
             val stats = dash?.optJSONObject("stats")
             val monitorOn = dash?.optBoolean("monitor_running") == true
             Panel {
-                Text("Мониторинг", style = MaterialTheme.typography.titleMedium)
+                Text(
+                    "Мониторинг",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = OnSurface,
+                    fontWeight = FontWeight.SemiBold,
+                )
                 Spacer(Modifier.height(10.dp))
                 StatusBadge(resolveMonitorStatus(monitorOn))
                 Spacer(Modifier.height(12.dp))
@@ -610,7 +639,12 @@ private fun AuthPanel(kind: AuthBroker.PromptKind, onSubmit: (String) -> Unit) {
         else -> ""
     }
     Panel {
-        Text("Авторизация Telethon", style = MaterialTheme.typography.titleMedium)
+        Text(
+            "Авторизация Telethon",
+            style = MaterialTheme.typography.titleMedium,
+            color = OnSurface,
+            fontWeight = FontWeight.SemiBold,
+        )
         Spacer(Modifier.height(8.dp))
         Field(
             label,
@@ -727,7 +761,12 @@ private fun ChatRow(chat: JSONObject, onToggle: () -> Unit, onDelete: () -> Unit
     Panel {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
-                Text(chat.optString("title"), style = MaterialTheme.typography.titleMedium)
+                Text(
+                    chat.optString("title"),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = OnSurface,
+                )
                 Text(
                     buildString {
                         append(chat.optString("chat_type"))
@@ -741,7 +780,18 @@ private fun ChatRow(chat: JSONObject, onToggle: () -> Unit, onDelete: () -> Unit
             FilterChip(
                 selected = active,
                 onClick = onToggle,
-                label = { Text(if (active) "ON" else "OFF") },
+                label = {
+                    Text(
+                        if (active) "ON" else "OFF",
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                },
+                colors = FilterChipDefaults.filterChipColors(
+                    labelColor = OnMuted,
+                    selectedLabelColor = OnSurface,
+                    selectedContainerColor = Accent.copy(alpha = 0.28f),
+                    containerColor = SlateElevated,
+                ),
             )
             IconButton(onClick = onDelete) {
                 Icon(Icons.Outlined.Delete, contentDescription = "Удалить", tint = Danger)
@@ -785,9 +835,15 @@ private fun DiscoverSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
         containerColor = SlateSurface,
+        contentColor = OnSurface,
     ) {
         Column(Modifier.padding(horizontal = 16.dp)) {
-            Text("Мои диалоги", style = MaterialTheme.typography.titleLarge)
+            Text(
+                "Мои диалоги",
+                style = MaterialTheme.typography.titleLarge,
+                color = OnSurface,
+                fontWeight = FontWeight.SemiBold,
+            )
             Spacer(Modifier.height(8.dp))
             OutlinedTextField(
                 value = ref,
@@ -837,10 +893,18 @@ private fun DiscoverSheet(
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
                             Column(Modifier.weight(1f)) {
-                                Text(item.optString("title"))
+                                Text(
+                                    item.optString("title"),
+                                    color = OnSurface,
+                                    style = MaterialTheme.typography.titleMedium,
+                                )
                                 Text(item.optString("chat_type"), color = OnMuted)
                             }
-                            Text(if (monitored) "✓" else "+", color = if (monitored) Success else Accent)
+                            Text(
+                                if (monitored) "✓" else "+",
+                                color = if (monitored) Success else Accent,
+                                fontWeight = FontWeight.Bold,
+                            )
                         }
                     }
                 }
@@ -1022,6 +1086,7 @@ private fun MatchRow(match: JSONObject, onOpen: () -> Unit) {
                         match.optString("chat_title"),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.SemiBold,
+                        color = OnSurface,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.weight(1f),
@@ -1101,7 +1166,12 @@ private fun MorePane(
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         Panel {
-            Text("Telegram API", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+            Text(
+                "Telegram API",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold,
+                color = OnSurface,
+            )
             Spacer(Modifier.height(6.dp))
             Text(
                 "Не хватает данных? Откройте страницу и вставьте из буфера.",
@@ -1189,7 +1259,12 @@ private fun MorePane(
 
         if (runtimeReady) {
             Panel {
-                Text("Параметры мониторинга", style = MaterialTheme.typography.titleMedium)
+                Text(
+                    "Параметры мониторинга",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = OnSurface,
+                    fontWeight = FontWeight.SemiBold,
+                )
                 Spacer(Modifier.height(8.dp))
                 Field("Интервал опроса (сек)", poll, KeyboardType.Number) { poll = it }
                 Text("Режим уведомлений Telegram", color = OnMuted)
@@ -1203,6 +1278,12 @@ private fun MorePane(
                             selected = notifyMode == mode,
                             onClick = { notifyMode = mode },
                             label = { Text(label) },
+                            colors = FilterChipDefaults.filterChipColors(
+                                labelColor = OnMuted,
+                                selectedLabelColor = OnSurface,
+                                selectedContainerColor = Accent.copy(alpha = 0.28f),
+                                containerColor = SlateElevated,
+                            ),
                         )
                     }
                 }
@@ -1225,7 +1306,12 @@ private fun MorePane(
             }
 
             Panel {
-                Text("Скан истории", style = MaterialTheme.typography.titleMedium)
+                Text(
+                    "Скан истории",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = OnSurface,
+                    fontWeight = FontWeight.SemiBold,
+                )
                 Text("Найти совпадения в уже существующих сообщениях.", color = OnMuted)
                 Spacer(Modifier.height(8.dp))
                 PrimaryButton(
@@ -1256,7 +1342,12 @@ private fun MorePane(
         }
 
         Panel {
-            Text("Система", style = MaterialTheme.typography.titleMedium)
+            Text(
+                "Система",
+                style = MaterialTheme.typography.titleMedium,
+                color = OnSurface,
+                fontWeight = FontWeight.SemiBold,
+            )
             QuietTextButton(onClick = onOpenBatterySettings) {
                 Icon(Icons.Outlined.Settings, null)
                 Spacer(Modifier.width(8.dp))
@@ -1279,19 +1370,21 @@ private fun NeedRuntime() {
 
 @Composable
 private fun Panel(content: @Composable () -> Unit) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(18.dp))
-            .background(
-                Brush.verticalGradient(
-                    listOf(SlateSurface, SlateElevated.copy(alpha = 0.55f)),
-                ),
-            )
-            .border(1.dp, Accent.copy(alpha = 0.12f), RoundedCornerShape(18.dp))
-            .padding(16.dp),
-        content = { content() },
-    )
+    CompositionLocalProvider(LocalContentColor provides OnSurface) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(18.dp))
+                .background(
+                    Brush.verticalGradient(
+                        listOf(SlateSurface, SlateElevated.copy(alpha = 0.55f)),
+                    ),
+                )
+                .border(1.dp, Accent.copy(alpha = 0.12f), RoundedCornerShape(18.dp))
+                .padding(16.dp),
+            content = { content() },
+        )
+    }
 }
 
 @Composable
@@ -1356,6 +1449,8 @@ private fun Field(
 
 @Composable
 private fun fieldColors() = OutlinedTextFieldDefaults.colors(
+    focusedTextColor = OnSurface,
+    unfocusedTextColor = OnSurface,
     focusedBorderColor = Accent,
     unfocusedBorderColor = OnMuted.copy(alpha = 0.28f),
     focusedLabelColor = Accent,

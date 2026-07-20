@@ -19,18 +19,42 @@
 [Архитектура](#-архитектура) •
 [FAQ](#-faq)
 
+<br/>
+
+<a href="https://github.com/Hanter1/tg-chat-monitor/releases/latest/download/tg-chat-monitor-android.apk">
+  <img src="https://img.shields.io/badge/⬇%20Скачать%20Android%20APK-3DDC97?style=for-the-badge&logo=android&logoColor=white" alt="Скачать Android APK"/>
+</a>
+&nbsp;
+<a href="https://github.com/Hanter1/tg-chat-monitor/releases/latest/download/tg-chat-monitor-windows.zip">
+  <img src="https://img.shields.io/badge/⬇%20Скачать%20Windows-0078D6?style=for-the-badge&logo=windows&logoColor=white" alt="Скачать Windows"/>
+</a>
+
 </div>
 
 ---
 
 ## 📥 Скачать
 
-Готовые сборки публикуются в [**Releases**](https://github.com/Hanter1/tg-chat-monitor/releases/latest) — без Git и без ручной установки Python.
+Готовые сборки — без Git и без ручной установки Python. Кнопки качают файл **сразу** (последний релиз).
 
-| Платформа | Что скачать | Как запустить |
-|-----------|-------------|---------------|
-| **Android** | `tg-chat-monitor-*-android.apk` | Установить APK → настройки в приложении → Старт |
-| **Windows (ПК)** | `tg-chat-monitor-*-windows.zip` | Распаковать → `install.bat` → `start.bat` |
+<p align="center">
+  <a href="https://github.com/Hanter1/tg-chat-monitor/releases/latest/download/tg-chat-monitor-android.apk">
+    <img src="https://img.shields.io/badge/Android-Скачать%20APK-3DDC97?style=for-the-badge&logo=android&logoColor=white" alt="Скачать Android APK"/>
+  </a>
+  &nbsp;
+  <a href="https://github.com/Hanter1/tg-chat-monitor/releases/latest/download/tg-chat-monitor-windows.zip">
+    <img src="https://img.shields.io/badge/Windows-Скачать%20ZIP-0078D6?style=for-the-badge&logo=windows&logoColor=white" alt="Скачать Windows ZIP"/>
+  </a>
+  &nbsp;
+  <a href="https://github.com/Hanter1/tg-chat-monitor/releases/latest">
+    <img src="https://img.shields.io/badge/Все%20релизы-GitHub-181717?style=for-the-badge&logo=github&logoColor=white" alt="Все релизы"/>
+  </a>
+</p>
+
+| Платформа | Файл | Как запустить |
+|-----------|------|---------------|
+| **Android** | [tg-chat-monitor-android.apk](https://github.com/Hanter1/tg-chat-monitor/releases/latest/download/tg-chat-monitor-android.apk) | Установить APK → настройки в приложении → Старт |
+| **Windows (ПК)** | [tg-chat-monitor-windows.zip](https://github.com/Hanter1/tg-chat-monitor/releases/latest/download/tg-chat-monitor-windows.zip) | Распаковать → `install.bat` → `start.bat` |
 
 **Android (кратко):** установите APK → **«Получить API ID и Hash»** (my.telegram.org) → **«Вставить из буфера»** → Старт → войдите в Telegram → чаты/слова в приложении → мониторинг. Бот опционален.
 

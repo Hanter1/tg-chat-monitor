@@ -141,11 +141,21 @@ jobs:
           if [ -f app/build/outputs/apk/release/app-release.apk ]; then
             cp app/build/outputs/apk/release/app-release.apk \
               "$GITHUB_WORKSPACE/dist/tg-chat-monitor-${VERSION}-android.apk"
+            # Stable name for README /releases/latest/download/ links
+            cp app/build/outputs/apk/release/app-release.apk \
+              "$GITHUB_WORKSPACE/dist/tg-chat-monitor-android.apk"
             echo "release=true" >> "$GITHUB_OUTPUT"
           fi
           if [ -f app/build/outputs/apk/debug/app-debug.apk ]; then
             cp app/build/outputs/apk/debug/app-debug.apk \
               "$GITHUB_WORKSPACE/dist/tg-chat-monitor-${VERSION}-android-debug.apk"
+            cp app/build/outputs/apk/debug/app-debug.apk \
+              "$GITHUB_WORKSPACE/dist/tg-chat-monitor-android-debug.apk"
+            # If no signed release, expose debug under the main stable name too
+            if [ ! -f "$GITHUB_WORKSPACE/dist/tg-chat-monitor-android.apk" ]; then
+              cp app/build/outputs/apk/debug/app-debug.apk \
+                "$GITHUB_WORKSPACE/dist/tg-chat-monitor-android.apk"
+            fi
             echo "debug=true" >> "$GITHUB_OUTPUT"
           fi
           ls -la "$GITHUB_WORKSPACE/dist"
@@ -180,6 +190,7 @@ jobs:
             --exclude '.env' \
             ./ staging/tg-chat-monitor/
           (cd staging && zip -r "../dist/tg-chat-monitor-${VERSION}-windows.zip" tg-chat-monitor)
+          cp "dist/tg-chat-monitor-${VERSION}-windows.zip" dist/tg-chat-monitor-windows.zip
           ls -la dist
 
       - uses: actions/upload-artifact@v4
@@ -220,17 +231,15 @@ jobs:
           body: |
             ## Скачать
 
-            | Платформа | Файл |
-            |-----------|------|
-            | **Android** | `tg-chat-monitor-*-android.apk` (или `*-debug.apk`) |
-            | **Windows** | `tg-chat-monitor-*-windows.zip` → распаковать и запустить `install.bat` |
+            | Платформа | Ссылка |
+            |-----------|--------|
+            | **Android** | [Скачать APK](https://github.com/Hanter1/tg-chat-monitor/releases/latest/download/tg-chat-monitor-android.apk) |
+            | **Windows** | [Скачать ZIP](https://github.com/Hanter1/tg-chat-monitor/releases/latest/download/tg-chat-monitor-windows.zip) |
 
             ### Android (кратко)
             1. Скачайте APK и разрешите установку из неизвестных источников.
-            2. Откройте приложение → **Настройки** → введите BOT_TOKEN / API_ID / API_HASH / ADMIN_USER_ID.
-            3. **Старт** → войдите в Telethon (телефон / код / 2FA).
+            2. **«Получить API ID и Hash»** → **«Вставить из буфера»** → Старт → войдите в Telegram.
+            3. Добавьте чаты и слова → включите мониторинг.
             4. Исключите приложение из оптимизации батареи.
 
             Подробнее: [docs/android.md](docs/android.md)
-
-            > Если в релизе нет APK — Android-сборка ещё не прошла; Windows ZIP можно использовать.

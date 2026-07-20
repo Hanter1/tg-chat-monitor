@@ -4,10 +4,13 @@ import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
+import android.graphics.Bitmap
+import android.graphics.Canvas
 import android.net.Uri
 import android.os.Handler
 import android.os.Looper
 import androidx.core.app.NotificationCompat
+import androidx.core.content.ContextCompat
 import org.json.JSONObject
 
 /**
@@ -31,14 +34,18 @@ class NotificationBroker(private val context: Context) {
             val kw = buildString {
                 if (keywords != null) {
                     for (i in 0 until keywords.length()) {
-                        if (i > 0) append(", ")
+                        if (i > 0) append(" · ")
                         append(keywords.optString(i))
                     }
                 }
             }
             val link = obj.optString("message_link", "")
             val body = buildString {
-                if (kw.isNotEmpty()) append("🔑 $kw\n")
+                if (kw.isNotEmpty()) {
+                    append("Слова: ")
+                    append(kw)
+                    append('\n')
+                }
                 append(text.take(180))
             }
 
@@ -54,24 +61,40 @@ class NotificationBroker(private val context: Context) {
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
             )
 
-            val notification = NotificationCompat.Builder(context, MATCH_CHANNEL_ID)
-                .setSmallIcon(R.drawable.ic_launcher_foreground)
-                .setContentTitle("🔔 $title")
-                .setContentText(body)
+            val builder = NotificationCompat.Builder(context, MATCH_CHANNEL_ID)
+                .setSmallIcon(R.drawable.ic_notification)
+                .setColor(BRAND_COLOR)
+                .setContentTitle(title)
+                .setContentText(if (kw.isNotEmpty()) "$kw — ${text.take(80)}" else text.take(100))
                 .setStyle(NotificationCompat.BigTextStyle().bigText(body))
                 .setContentIntent(pending)
                 .setAutoCancel(true)
                 .setPriority(NotificationCompat.PRIORITY_HIGH)
-                .build()
+                .setCategory(NotificationCompat.CATEGORY_MESSAGE)
+
+            largeIconBitmap()?.let { builder.setLargeIcon(it) }
 
             val manager = context.getSystemService(NotificationManager::class.java) ?: return
-            manager.notify(nextId++, notification)
+            manager.notify(nextId++, builder.build())
         } catch (_: Exception) {
             // ignore malformed payloads
         }
     }
 
+    private fun largeIconBitmap(): Bitmap? {
+        val drawable = ContextCompat.getDrawable(context, R.mipmap.ic_launcher)
+            ?: ContextCompat.getDrawable(context, R.drawable.ic_notification_large)
+            ?: return null
+        val size = 192
+        val bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
+        val canvas = Canvas(bitmap)
+        drawable.setBounds(0, 0, size, size)
+        drawable.draw(canvas)
+        return bitmap
+    }
+
     companion object {
         const val MATCH_CHANNEL_ID = "matches_channel"
+        private const val BRAND_COLOR = 0xFF2AABEE.toInt()
     }
 }

@@ -54,6 +54,13 @@ git push origin v1.0.0
 
 Дождитесь зелёного workflow **Release** — на странице Releases появятся файлы для скачивания.
 
+Стабильные имена для прямых ссылок (всегда указывают на *latest*):
+
+- `tg-chat-monitor-android.apk`
+- `tg-chat-monitor-windows.zip`
+
+Пример: `https://github.com/Hanter1/tg-chat-monitor/releases/latest/download/tg-chat-monitor-android.apk`
+
 ## Локальная release-сборка
 
 В `android/local.properties` (файл в `.gitignore`):

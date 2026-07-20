@@ -1,0 +1,177 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      build_debug_apk:
+        description: "Also upload debug APK (no release signing required)"
+        type: boolean
+        default: true
+
+permissions:
+  contents: write
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: |
+            requirements.txt
+            requirements-dev.txt
+
+      - name: Install dependencies
+        run: pip install -r requirements-dev.txt
+
+      - name: Ruff
+        run: ruff check .
+
+      - name: Pytest
+        run: pytest -q
+
+  android:
+    needs: test
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: android
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Prepare release keystore
+        id: keystore
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+        run: |
+          if [ -n "$KEYSTORE_BASE64" ]; then
+            echo "$KEYSTORE_BASE64" | base64 -d > "$GITHUB_WORKSPACE/release.jks"
+            echo "present=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "present=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::KEYSTORE_BASE64 secret missing — building debug APK only"
+          fi
+
+      - name: Build release APK
+        if: steps.keystore.outputs.present == 'true'
+        env:
+          KEYSTORE_PATH: ${{ github.workspace }}/release.jks
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: chmod +x gradlew && ./gradlew :app:assembleRelease --stacktrace
+
+      - name: Build debug APK
+        if: steps.keystore.outputs.present != 'true' || inputs.build_debug_apk == true || github.event_name == 'workflow_dispatch'
+        run: |
+          chmod +x gradlew
+          ./gradlew :app:assembleDebug --stacktrace
+
+      - name: Collect APKs
+        id: apk
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/dist"
+          VERSION="${GITHUB_REF_NAME}"
+          if [ -f app/build/outputs/apk/release/app-release.apk ]; then
+            cp app/build/outputs/apk/release/app-release.apk \
+              "$GITHUB_WORKSPACE/dist/tg-chat-monitor-${VERSION}-android.apk"
+            echo "release=true" >> "$GITHUB_OUTPUT"
+          fi
+          if [ -f app/build/outputs/apk/debug/app-debug.apk ]; then
+            cp app/build/outputs/apk/debug/app-debug.apk \
+              "$GITHUB_WORKSPACE/dist/tg-chat-monitor-${VERSION}-android-debug.apk"
+            echo "debug=true" >> "$GITHUB_OUTPUT"
+          fi
+          ls -la "$GITHUB_WORKSPACE/dist"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: android-apk
+          path: dist/*.apk
+
+  windows-zip:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Pack Windows ZIP
+        run: |
+          VERSION="${GITHUB_REF_NAME}"
+          mkdir -p dist staging
+          rsync -a \
+            --exclude '.git' \
+            --exclude 'venv' \
+            --exclude '.venv' \
+            --exclude '__pycache__' \
+            --exclude '.pytest_cache' \
+            --exclude 'android/.gradle' \
+            --exclude 'android/**/build' \
+            --exclude '*.session' \
+            --exclude '*.db' \
+            --exclude '.env' \
+            ./ staging/tg-chat-monitor/
+          (cd staging && zip -r "../dist/tg-chat-monitor-${VERSION}-windows.zip" tg-chat-monitor)
+          ls -la dist
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows-zip
+          path: dist/*.zip
+
+  publish:
+    needs: [android, windows-zip]
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Flatten artifacts
+        run: |
+          mkdir -p dist
+          find artifacts -type f \( -name '*.apk' -o -name '*.zip' \) -exec cp {} dist/ \;
+          ls -la dist
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          files: dist/*
+          body: |
+            ## Скачать
+
+            | Платформа | Файл |
+            |-----------|------|
+            | **Android** | `tg-chat-monitor-*-android.apk` (или `*-debug.apk`) |
+            | **Windows** | `tg-chat-monitor-*-windows.zip` → распаковать и запустить `install.bat` |
+
+            ### Android (кратко)
+            1. Скачайте APK и разрешите установку из неизвестных источников.
+            2. Откройте приложение → **Настройки** → введите BOT_TOKEN / API_ID / API_HASH / ADMIN_USER_ID.
+            3. **Старт** → войдите в Telethon (телефон / код / 2FA).
+            4. Исключите приложение из оптимизации батареи.
+
+            Подробнее: [docs/android.md](docs/android.md)

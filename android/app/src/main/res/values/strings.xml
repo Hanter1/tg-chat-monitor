@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">TG Chat Monitor</string>
+    <string name="notification_channel_name">Мониторинг</string>
+    <string name="notification_channel_desc">Фоновый мониторинг Telegram-чатов</string>
+    <string name="notification_title">TG Chat Monitor</string>
+    <string name="notification_text">Мониторинг активен</string>
+    <string name="notification_starting">Запуск…</string>
+</resources>

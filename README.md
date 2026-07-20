@@ -9,15 +9,32 @@
 [![Telethon](https://img.shields.io/badge/Telethon-1.34%2B-0088CC?logo=telegram&logoColor=white)](https://docs.telethon.dev/)
 [![SQLAlchemy](https://img.shields.io/badge/SQLAlchemy-2.0-D71F00)](https://www.sqlalchemy.org/)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+[![GitHub Release](https://img.shields.io/github/v/release/Hanter1/tg-chat-monitor?include_prereleases)](https://github.com/Hanter1/tg-chat-monitor/releases/latest)
 
 *Следит за сообщениями в выбранных чатах и мгновенно присылает вам в ЛС ссылку на найденное.*
 
+[Скачать](#-скачать) •
 [Быстрый старт](#-быстрый-старт) •
 [Команды](#-команды-бота) •
 [Архитектура](#-архитектура) •
 [FAQ](#-faq)
 
 </div>
+
+---
+
+## 📥 Скачать
+
+Готовые сборки публикуются в [**Releases**](https://github.com/Hanter1/tg-chat-monitor/releases/latest) — без Git и без ручной установки Python.
+
+| Платформа | Что скачать | Как запустить |
+|-----------|-------------|---------------|
+| **Android** | `tg-chat-monitor-*-android.apk` | Установить APK → настройки в приложении → Старт |
+| **Windows (ПК)** | `tg-chat-monitor-*-windows.zip` | Распаковать → `install.bat` → `start.bat` |
+
+**Android (кратко):** разрешите установку из неизвестных источников → откройте APK → вкладка «Настройки» (BOT_TOKEN, API_ID, API_HASH, ADMIN_USER_ID) → «Старт» → войдите в Telethon → исключите приложение из оптимизации батареи.
+
+Подробнее: [docs/android.md](docs/android.md). Как собрать релиз: [docs/releasing.md](docs/releasing.md).
 
 ---
 
@@ -101,7 +118,10 @@ sequenceDiagram
 tg-chat-monitor/
 ├── install.bat       # Установщик для Windows (скачивает Python)
 ├── start.bat         # Запуск бота (Windows)
-├── main.py           # Точка входа
+├── main.py           # Точка входа (CLI)
+├── runtime.py        # Общий запуск для CLI и Android
+├── android_bridge.py # Мост Chaquopy ↔ runtime
+├── android/          # APK (Chaquopy + Compose)
 ├── setup.py          # Мастер настройки (веб-интерфейс)
 ├── setup.bat         # Запуск мастера (Windows)
 ├── setup.sh          # Запуск мастера (Linux/macOS)
@@ -115,15 +135,10 @@ tg-chat-monitor/
 ├── database.py       # Модели и запросы SQLAlchemy
 ├── utils.py          # Формирование ссылок, поиск слов
 ├── config.py         # Загрузка .env
+├── docs/             # android.md, releasing.md, assets
 ├── requirements.txt
 ├── requirements-dev.txt
 ├── tests/            # pytest
-├── Dockerfile
-├── docker-compose.yml
-├── .env.example      # Шаблон переменных окружения
-└── docs/
-    └── assets/
-        └── architecture.svg
 ```
 
 ---
@@ -404,7 +419,8 @@ ruff check .
 pytest
 ```
 
-CI (GitHub Actions): `ruff check` + `pytest` на каждый push/PR в `main`.
+CI (GitHub Actions): `ruff check` + `pytest` на каждый push/PR в `main`.  
+Релизы (тег `v*`): APK + Windows ZIP → [Releases](https://github.com/Hanter1/tg-chat-monitor/releases).
 
 ---
 
@@ -438,6 +454,13 @@ Telegram Client API (Telethon) работает как обычный клиен
 <summary><b>Как добавить чат, если пересылка запрещена?</b></summary>
 
 Если в чате запрещена пересылка, добавьте бота в группу временно или используйте ID чата, полученный через Telethon-утилиты. В текущей версии основной способ — пересылка сообщения.
+</details>
+
+<details>
+<summary><b>Есть версия для Android?</b></summary>
+
+Да. Скачайте APK из [Releases](https://github.com/Hanter1/tg-chat-monitor/releases/latest) и следуйте [docs/android.md](docs/android.md).  
+На телефоне нужен постоянный Foreground Service и исключение из оптимизации батареи. Для 24/7 надёжнее ПК или VPS.
 </details>
 
 <details>

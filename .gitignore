@@ -31,6 +31,14 @@ env/
 # Кэш установщика Windows
 installer/windows/.cache/
 
+# Android
+android/.gradle/
+android/local.properties
+android/**/build/
+android/app/build/
+*.jks
+*.keystore
+
 # IDE
 .idea/
 .vscode/

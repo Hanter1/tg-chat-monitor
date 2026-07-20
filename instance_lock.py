@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import atexit
+import os
 import sys
 from pathlib import Path
 
@@ -11,6 +12,9 @@ _lock_handle = None
 
 def acquire_single_instance_lock(project_root: Path) -> None:
     global _lock_handle
+
+    if os.environ.get("TG_MONITOR_SKIP_LOCK", "").strip() in {"1", "true", "yes"}:
+        return
 
     lock_path = project_root / ".tg-chat-monitor.lock"
     lock_path.parent.mkdir(parents=True, exist_ok=True)

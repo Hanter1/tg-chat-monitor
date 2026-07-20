@@ -95,3 +95,65 @@ async def test_notify_skips_duplicate(monkeypatch):
     sent = await service.notify(event)
     assert sent is False
     assert len(bot.messages) == 0
+
+
+@pytest.mark.asyncio
+async def test_local_sink_without_bot(monkeypatch):
+    events: list[MatchEvent] = []
+
+    async def sink(event: MatchEvent):
+        events.append(event)
+
+    service = NotificationService(
+        None,
+        admin_user_id=0,
+        on_match=sink,
+        telegram_notify=False,
+    )
+    service._notify_mode = "instant"
+
+    async def fake_log_match(**kwargs):
+        return True
+
+    monkeypatch.setattr("notifications.db.log_match", fake_log_match)
+
+    event = MatchEvent(
+        chat_id=-1001,
+        chat_title="Chat",
+        chat_type="supergroup",
+        username=None,
+        message_id=10,
+        text="bitcoin news",
+        matched_keywords=["bitcoin"],
+        message_link="https://t.me/c/1/10",
+    )
+    sent = await service.notify(event)
+    assert sent is True
+    assert len(events) == 1
+    assert events[0].matched_keywords == ["bitcoin"]
+
+
+@pytest.mark.asyncio
+async def test_telegram_notify_disabled_skips_bot(monkeypatch):
+    bot = FakeBot()
+    service = NotificationService(bot, admin_user_id=1, telegram_notify=False)
+    service._notify_mode = "instant"
+
+    async def fake_log_match(**kwargs):
+        return True
+
+    monkeypatch.setattr("notifications.db.log_match", fake_log_match)
+
+    await service.notify(
+        MatchEvent(
+            chat_id=-1001,
+            chat_title="Chat",
+            chat_type="supergroup",
+            username=None,
+            message_id=10,
+            text="x",
+            matched_keywords=["x"],
+            message_link="https://t.me/c/1/10",
+        )
+    )
+    assert len(bot.messages) == 0

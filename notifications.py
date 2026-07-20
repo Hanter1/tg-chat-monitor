@@ -1,8 +1,11 @@
 from __future__ import annotations
 
 import asyncio
+import inspect
 import logging
-from dataclasses import dataclass
+from collections.abc import Awaitable, Callable
+from dataclasses import asdict, dataclass
+from typing import Any
 
 from aiogram import Bot
 from aiogram.enums import ParseMode
@@ -26,6 +29,8 @@ NOTIFY_MODE_LABELS = {
     "digest_60": "📦 Каждый час",
 }
 
+MatchSink = Callable[["MatchEvent"], Awaitable[None] | None]
+
 
 @dataclass
 class MatchEvent:
@@ -38,27 +43,41 @@ class MatchEvent:
     matched_keywords: list[str]
     message_link: str
 
+    def to_dict(self) -> dict[str, Any]:
+        return asdict(self)
+
 
 class NotificationService:
     def __init__(
         self,
-        bot: Bot,
+        bot: Bot | None,
         admin_user_id: int,
         *,
         telethon: TelegramClient | None = None,
         bot_username: str | None = None,
+        on_match: MatchSink | None = None,
+        telegram_notify: bool = True,
     ) -> None:
         self.bot = bot
         self.admin_user_id = admin_user_id
         self.telethon = telethon
         self.bot_username = bot_username
+        self.on_match = on_match
+        self._telegram_notify = telegram_notify
         self._pending: list[MatchEvent] = []
         self._digest_task: asyncio.Task | None = None
         self._notify_mode = "instant"
 
+    @property
+    def telegram_enabled(self) -> bool:
+        return self.bot is not None and self._telegram_notify and self.admin_user_id > 0
+
     async def refresh_settings(self) -> None:
         bot_settings = await db.get_bot_settings()
         self._notify_mode = bot_settings.notify_mode
+        self._telegram_notify = bool(
+            getattr(bot_settings, "telegram_notify", self._telegram_notify)
+        )
 
     async def notify(self, event: MatchEvent, *, historical: bool = False) -> bool:
         is_new = await db.log_match(
@@ -72,6 +91,11 @@ class NotificationService:
         if not is_new:
             return False
 
+        await self._emit_local(event)
+
+        if not self.telegram_enabled:
+            return True
+
         if historical or self._notify_mode == "instant":
             await self._send_single(event, historical=historical)
             return True
@@ -80,6 +104,16 @@ class NotificationService:
         if self._digest_task is None or self._digest_task.done():
             self._digest_task = asyncio.create_task(self._digest_loop())
         return True
+
+    async def _emit_local(self, event: MatchEvent) -> None:
+        if self.on_match is None:
+            return
+        try:
+            result = self.on_match(event)
+            if inspect.isawaitable(result):
+                await result
+        except Exception:
+            logger.exception("Local match sink failed")
 
     async def flush_digest(self) -> None:
         if not self._pending:
@@ -90,6 +124,9 @@ class NotificationService:
 
         batch = self._pending[:]
         self._pending.clear()
+
+        if not self.telegram_enabled:
+            return
 
         lines = [
             f"📦 <b>Дайджест — {len(batch)} совпадений</b>",
@@ -120,6 +157,7 @@ class NotificationService:
         lines.append("\n<i>Кнопки 📎 перешлют сообщение в этот чат.</i>")
 
         keyboard = InlineKeyboardMarkup(inline_keyboard=buttons[:15]) if buttons else None
+        assert self.bot is not None
         await self.bot.send_message(
             self.admin_user_id,
             "\n\n".join(lines),
@@ -165,6 +203,9 @@ class NotificationService:
 
     async def _send_single(self, event: MatchEvent, *, historical: bool) -> None:
         from bot_ui import format_match_notification
+
+        if not self.telegram_enabled or self.bot is None:
+            return
 
         notification, preview_options, keyboard = format_match_notification(
             title=event.chat_title,

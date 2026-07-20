@@ -32,7 +32,7 @@
 | **Android** | `tg-chat-monitor-*-android.apk` | Установить APK → настройки в приложении → Старт |
 | **Windows (ПК)** | `tg-chat-monitor-*-windows.zip` | Распаковать → `install.bat` → `start.bat` |
 
-**Android (кратко):** разрешите установку из неизвестных источников → откройте APK → вкладка «Настройки» (BOT_TOKEN, API_ID, API_HASH, ADMIN_USER_ID) → «Старт» → войдите в Telethon → исключите приложение из оптимизации батареи.
+**Android (кратко):** разрешите установку из неизвестных источников → откройте APK → введите API_ID/API_HASH → Старт → войдите в Telegram → добавьте чаты и слова в приложении → включите мониторинг. Бот опционален (дублирование уведомлений в Telegram).
 
 Подробнее: [docs/android.md](docs/android.md). Как собрать релиз: [docs/releasing.md](docs/releasing.md).
 
@@ -121,6 +121,8 @@ tg-chat-monitor/
 ├── main.py           # Точка входа (CLI)
 ├── runtime.py        # Общий запуск для CLI и Android
 ├── android_bridge.py # Мост Chaquopy ↔ runtime
+├── app_api.py        # JSON API для Android UI (чаты, слова, монитор)
+├── runtime_state.py  # Runtime handle (monitor/telethon) для bridge
 ├── android/          # APK (Chaquopy + Compose)
 ├── setup.py          # Мастер настройки (веб-интерфейс)
 ├── setup.bat         # Запуск мастера (Windows)
@@ -342,10 +344,11 @@ python main.py
 
 | Переменная | Обязательная | По умолчанию | Описание |
 |------------|:------------:|--------------|----------|
-| `BOT_TOKEN` | ✅ | — | Токен Telegram-бота |
+| `BOT_TOKEN` | ✅ на ПК / ❌ на Android | — | Токен Telegram-бота (на Android опционален) |
 | `API_ID` | ✅ | — | API ID с my.telegram.org |
 | `API_HASH` | ✅ | — | API Hash с my.telegram.org |
-| `ADMIN_USER_ID` | ✅ | — | Telegram ID администратора |
+| `ADMIN_USER_ID` | ✅ на ПК / ❌ на Android | — | Telegram ID администратора (на Android — авто) |
+| `TELEGRAM_NOTIFY` | ❌ | `1` на ПК / `0` на Android | Дублировать совпадения в Telegram |
 | `TELETHON_SESSION` | ❌ | `monitor_session` | Имя файла сессии Telethon |
 | `DATABASE_URL` | ❌ | `sqlite+aiosqlite:///./monitor.db` | URL базы данных |
 | `POLL_INTERVAL` | ❌ | `10` | Интервал опроса (секунды) |
@@ -460,7 +463,8 @@ Telegram Client API (Telethon) работает как обычный клиен
 <summary><b>Есть версия для Android?</b></summary>
 
 Да. Скачайте APK из [Releases](https://github.com/Hanter1/tg-chat-monitor/releases/latest) и следуйте [docs/android.md](docs/android.md).  
-На телефоне нужен постоянный Foreground Service и исключение из оптимизации батареи. Для 24/7 надёжнее ПК или VPS.
+Приложение самоуправляемое: чаты, слова, мониторинг и уведомления — без бота. Бот можно включить для дублирования в Telegram.  
+На телефоне нужен Foreground Service и исключение из оптимизации батареи. Для 24/7 надёжнее ПК или VPS.
 </details>
 
 <details>

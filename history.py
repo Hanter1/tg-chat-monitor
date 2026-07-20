@@ -36,7 +36,7 @@ class HistoryScanner:
         self,
         settings: Settings,
         telethon_client: TelegramClient,
-        bot: Bot,
+        bot: Bot | None,
         notifier: NotificationService,
     ) -> None:
         self.settings = settings

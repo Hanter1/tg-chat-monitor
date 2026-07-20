@@ -13,13 +13,14 @@ class MonitorApp : Application() {
         if (!Python.isStarted()) {
             Python.start(AndroidPlatform(this))
         }
-        createNotificationChannel()
+        createNotificationChannels()
     }
 
-    private fun createNotificationChannel() {
+    private fun createNotificationChannels() {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
         val manager = getSystemService(NotificationManager::class.java) ?: return
-        val channel = NotificationChannel(
+
+        val serviceChannel = NotificationChannel(
             MonitorService.CHANNEL_ID,
             getString(R.string.notification_channel_name),
             NotificationManager.IMPORTANCE_LOW,
@@ -27,6 +28,17 @@ class MonitorApp : Application() {
             description = getString(R.string.notification_channel_desc)
             setShowBadge(false)
         }
-        manager.createNotificationChannel(channel)
+
+        val matchChannel = NotificationChannel(
+            NotificationBroker.MATCH_CHANNEL_ID,
+            getString(R.string.matches_channel_name),
+            NotificationManager.IMPORTANCE_HIGH,
+        ).apply {
+            description = getString(R.string.matches_channel_desc)
+            enableVibration(true)
+        }
+
+        manager.createNotificationChannel(serviceChannel)
+        manager.createNotificationChannel(matchChannel)
     }
 }

@@ -58,6 +58,7 @@ class BotSettings(Base):
     scan_history_limit: Mapped[int] = mapped_column(Integer, default=100)
     scan_period_days: Mapped[int] = mapped_column(Integer, default=7)
     scan_mode: Mapped[str] = mapped_column(String(16), default="timeline")
+    telegram_notify: Mapped[bool] = mapped_column(Boolean, default=True)
 
 
 class MatchRecord(Base):
@@ -143,6 +144,12 @@ async def create_tables(env_defaults: Settings | None = None) -> None:
                 "scan_mode",
                 "ALTER TABLE bot_settings ADD COLUMN scan_mode VARCHAR(16) DEFAULT 'timeline'",
             )
+            await _ensure_column(
+                conn,
+                "bot_settings",
+                "telegram_notify",
+                "ALTER TABLE bot_settings ADD COLUMN telegram_notify BOOLEAN DEFAULT 1",
+            )
 
     if env_defaults is not None:
         await ensure_bot_settings(env_defaults)
@@ -160,6 +167,7 @@ async def ensure_bot_settings(env_defaults: Settings) -> BotSettings:
                 scan_history_limit=env_defaults.scan_history_limit,
                 scan_period_days=env_defaults.scan_period_days,
                 scan_mode=env_defaults.scan_mode,
+                telegram_notify=env_defaults.telegram_notify,
             )
             session.add(settings)
             await session.commit()

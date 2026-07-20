@@ -93,6 +93,8 @@ async def test_bot_settings_from_env_defaults(database):
         scan_history_limit=50,
         scan_period_days=14,
         scan_mode="search",
+        telegram_notify=True,
+        allow_no_bot=False,
     )
     await db.create_tables(env_defaults=defaults)
     settings = await db.get_bot_settings()

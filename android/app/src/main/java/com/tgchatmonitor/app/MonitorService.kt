@@ -17,6 +17,7 @@ class MonitorService : Service() {
     private val handler = Handler(Looper.getMainLooper())
     private var bridge: PythonBridge? = null
     private var authBroker: AuthBroker? = null
+    private var notificationBroker: NotificationBroker? = null
 
     private val pollStatus = object : Runnable {
         override fun run() {
@@ -60,9 +61,12 @@ class MonitorService : Service() {
 
         if (bridge == null) {
             val broker = AuthBroker()
+            val notifyBroker = NotificationBroker(applicationContext)
             authBroker = broker
+            notificationBroker = notifyBroker
             instanceAuthBroker = broker
-            bridge = PythonBridge(this, broker)
+            instanceBridge = null
+            bridge = PythonBridge(this, broker, notifyBroker).also { instanceBridge = it }
         }
 
         ServiceCompat.startForeground(
@@ -76,10 +80,7 @@ class MonitorService : Service() {
             },
         )
 
-        val started = bridge?.start() == true
-        if (!started && bridge?.isRunning() != true) {
-            // already running or failed to start thread
-        }
+        bridge?.start()
 
         handler.removeCallbacks(pollStatus)
         handler.post(pollStatus)
@@ -92,6 +93,7 @@ class MonitorService : Service() {
         bridge?.stop()
         isRunning = false
         instanceAuthBroker = null
+        instanceBridge = null
         super.onDestroy()
     }
 
@@ -132,6 +134,10 @@ class MonitorService : Service() {
 
         @Volatile
         var instanceAuthBroker: AuthBroker? = null
+            private set
+
+        @Volatile
+        var instanceBridge: PythonBridge? = null
             private set
 
         fun start(context: Context) {
